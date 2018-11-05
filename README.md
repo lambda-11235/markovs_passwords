@@ -1,0 +1,15 @@
+
+# Markov's Passwords
+
+Markov's passwords is a program to generate random passwords composed of strings
+of pronounceable made up words. It is based off of the XKCD comic
+["Password Strength"](https://www.xkcd.com/936/), and the observation that
+made-up words are even more resistant to dictionary attacks from the
+Computerphile episode
+["How to Choose a Password"](https://www.youtube.com/watch?v=3NjQ9b3pgIg).
+
+# How It Works
+
+I use a Markov chain of word frequencies based of off the $n$ characters before
+them. The lower $n$ is the more unrecognizable a character is. If $n$ is too
+high the algorithm simply chooses dictionary words.
