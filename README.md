@@ -13,3 +13,6 @@ Computerphile episode
 I use a Markov chain of word frequencies based of off the $n$ characters before
 them. The lower $n$ is the more unrecognizable a character is. If $n$ is too
 high the algorithm simply chooses dictionary words.
+
+The program thus needs a dictionary file as input, and could theoretically work
+on multiple languages.
