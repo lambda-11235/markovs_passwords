@@ -42,23 +42,23 @@ class Generator:
             for i in range(0, len(word) - self.lookback):
                 pre = word[i:(i + self.lookback)]
                 post = word[i + self.lookback]
-        
+
                 if pre not in self.freqs.keys():
                     self.freqs[pre] = {}
-        
+
                 if post not in self.freqs[pre]:
                     self.freqs[pre][post] = 0
-        
+
                 if post.isalpha():
                     self.freqs[pre][post] += 1
-        
+
         for pre in self.freqs.keys():
             fsum = sum(self.freqs[pre].values())
-        
+
             if fsum > 0:
                 for post in self.freqs[pre].keys():
                     self.freqs[pre][post] /= fsum
-        
+
 
     def nextChar(self, word):
         """
@@ -68,7 +68,7 @@ class Generator:
 
         pre = self.freqs.get(word[-(self.lookback):])
         ch = None
-        
+
         if pre is not None:
             keys = list(pre.keys())
             values = list(pre.values())
