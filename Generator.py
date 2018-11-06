@@ -77,6 +77,16 @@ class LBGenerator:
         return ch
 
 
+    def toRepr(self):
+        return {'lookback' : self.lookback, 'freqs' : self.freqs}
+
+    @classmethod
+    def fromRepr(cls, rep):
+        gen = cls(rep['lookback'])
+        gen.freqs = rep['freqs']
+        return gen
+
+
 class Generator:
     """
     Generates new characters for words based off of a Markov chain.
@@ -127,3 +137,15 @@ class Generator:
             ch = random.choice(list(self.charSet))
 
         return ch.lower()
+
+
+    def toRepr(self):
+        return {'lookback' : self.lookback, 'charSet' : list(self.charSet),
+                'models' : [g.toRepr() for g in self.gens]}
+
+    @classmethod
+    def fromRepr(cls, rep):
+        gen = cls(rep['lookback'])
+        gen.charSet = set(rep['charSet'])
+        gen.gens = [LBGenerator.fromRepr(m) for m in rep['models']]
+        return gen

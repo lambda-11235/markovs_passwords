@@ -17,15 +17,15 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-import random
 import argparse
+import msgpack
 
 from Generator import Generator
 
 
 parser = argparse.ArgumentParser(description='Create pronounceable passwords.')
-parser.add_argument(dest='dictFile', type=str,
-        help='A dictionary file to model words on.')
+parser.add_argument(dest='modelFile', type=str,
+        help='A file with the trained model.')
 parser.add_argument('-c', '--chars-per-word', dest='chars', type=int,
         default=6, help='Number of characters per word.')
 parser.add_argument('-w', '--words', dest='words', type=int, default=4,
@@ -34,21 +34,12 @@ parser.add_argument('-p', '--passwords', dest='passwords', type=int, default=5,
         help='Number of passwords to output.')
 parser.add_argument('-s', '--separator', dest='sep', type=str, default='_',
         help='Word separation character.')
-parser.add_argument('-l', '--lookback', dest='lb', type=int, default=20,
-        help='Lookback in Markov chain.')
 args = parser.parse_args()
 
 
-with open(args.dictFile) as f:
-    s = f.read()
-    words = s.split()
-
-if len(words) == 0:
-    print("No words in dictionary.")
-    exit(0)
-
-gen = Generator(args.lb)
-gen.train(words)
+with open(args.modelFile, 'rb') as f:
+    rep = msgpack.load(f, raw=False)
+    gen = Generator.fromRepr(rep)
 
 
 for i in range(0, args.passwords):
