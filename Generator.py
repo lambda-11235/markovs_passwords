@@ -17,6 +17,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
+import math
 import random
 
 
@@ -75,6 +76,22 @@ class LBGenerator:
             ch = random.choices(keys, values)[0]
 
         return ch
+
+
+    def entropyRate(self):
+        ent = 0
+        cnt = 0
+
+        for fs in self.freqs.values():
+            for f in fs.values():
+                ent -= f*math.log2(f)
+                cnt += 1
+
+        if cnt == 0:
+            # No information in no choice.
+            return 0
+        else:
+            return ent/cnt
 
 
     def toRepr(self):
@@ -137,6 +154,15 @@ class Generator:
             ch = random.choice(list(self.charSet))
 
         return ch.lower()
+
+
+    def entropyRate(self):
+        if len(self.gens) > 0:
+            return sum([g.entropyRate() for g in self.gens])/len(self.gens)
+        else:
+            # Here we simply have the entropy of a single random selection.
+            p = 1/len(self.charSet)
+            return -p*math.log2(p)
 
 
     def toRepr(self):

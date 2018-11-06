@@ -30,8 +30,8 @@ denbur_dthway_npliab_icketi
 I use a Markov chain of word frequencies based of off the $n$ characters before
 them. The higher $n$ is the more recognizable a character is. If $n$ is to large
 the model may end up outputting longer words verbatim from the dictionary, as
-they are the only matches that are that long. In general $n$ should be equal to
-the average word length.
+they are the only matches that are that long. In general $n$ should be selected
+to give the highest entropy rate (outputted by the training program).
 
 The program thus needs a dictionary file as input, and could theoretically work
 on multiple languages, provided that they are alphebetic and not logographic

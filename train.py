@@ -44,5 +44,7 @@ if len(words) == 0:
 gen = Generator(args.lb)
 gen.train(words)
 
+print("Entropy Rate: {}".format(gen.entropyRate()))
+
 with open(args.modelFile, 'wb') as f:
     msgpack.dump(gen.toRepr(), f)
