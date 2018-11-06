@@ -37,6 +37,8 @@ parser.add_argument('-l', '--lookback', dest='lb', type=int, default=2,
 args = parser.parse_args()
 
 
+characterSet = set()
+
 # Create a Markov chain that is represented as a map from prefixes of args.lb
 # chars to character frequencies.
 freqs = {}
@@ -46,6 +48,10 @@ with open(args.dictFile) as f:
     words = s.split()
 
 for word in words:
+    for ch in word:
+        if ch.isalpha():
+            characterSet.add(ch)
+
     for i in range(0, len(word) - args.lb):
         pre = word[i:(i + args.lb)]
         post = word[i + args.lb]
@@ -66,29 +72,37 @@ for pre in freqs.keys():
         for post in freqs[pre].keys():
             freqs[pre][post] /= fsum
 
+characterSet = list(characterSet)
+
 
 for i in range(0, args.passwords):
     # Build password from frequencies.
     password = ""
     for j in range(0, args.words):
-        # TODO: Should we start with a word?
-        word = random.choice(words)[:args.lb]
-    
-        for k in range(len(word), args.chars):
+        if len(freqs) > 0:
+            # Set to a key so we know that we can iterate on it.
+            word = random.choice(list(freqs.keys()))
+        else:
+            word = random.choice(characterSet)
+
+        for k in range(0, args.chars):
             pre = freqs.get(word[-(args.lb):])
-    
+
             if pre is None:
-                word += 'a'
+                if len(freqs) > 0:
+                    word += random.choice(list(freqs.keys()))
+                else:
+                    word += random.choice(characterSet)
             else:
                 keys = list(pre.keys())
                 values = list(pre.values())
-                # Randomly choose a word based off of its prefix characters and its
-                # frequency.
+                # Randomly choose a word based off of its prefix characters and
+                # its frequency.
                 word += random.choices(keys, values)[0]
-    
+
         password += word[:args.chars]
-    
+
         if j < args.words - 1:
             password += args.sep
-    
+
     print(password)
