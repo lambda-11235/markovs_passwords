@@ -11,8 +11,8 @@ Computerphile episode
 ## How It Works
 
 I use a Markov chain of word frequencies based of off the $n$ characters before
-them. The lower $n$ is the more unrecognizable a character is. If $n$ is too
-high the algorithm simply chooses dictionary words.
+them. The higher $n$ is the more recognizable a character is. $n$ is taken to be
+as large as possible up to a limit.
 
 The program thus needs a dictionary file as input, and could theoretically work
 on multiple languages, provided that they are alphebetic and not logographic
