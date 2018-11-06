@@ -43,13 +43,13 @@ class Generator:
                 pre = word[i:(i + self.lookback)]
                 post = word[i + self.lookback]
 
-                if pre not in self.freqs.keys():
-                    self.freqs[pre] = {}
-
-                if post not in self.freqs[pre]:
-                    self.freqs[pre][post] = 0
-
                 if post.isalpha():
+                    if pre not in self.freqs.keys():
+                        self.freqs[pre] = {}
+
+                    if post not in self.freqs[pre]:
+                        self.freqs[pre][post] = 0
+
                     self.freqs[pre][post] += 1
 
         for pre in self.freqs.keys():

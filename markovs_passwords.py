@@ -48,10 +48,16 @@ if len(words) == 0:
     exit(0)
 
 gens = []
-for i in range(0, args.lb + 1):
+for i in range(0, args.lb):
     gen = Generator(i)
     gen.train(words)
     gens.append(gen)
+
+charSet = set()
+for word in words:
+    for ch in word:
+        if ch.isalpha():
+            charSet.add(ch)
 
 
 for i in range(0, args.passwords):
@@ -62,12 +68,15 @@ for i in range(0, args.passwords):
 
         for k in range(0, args.chars):
             ch = None
-            idx = k % (args.lb + 1)
+            idx = k % args.lb
 
             # Try various lookback amounts until we get a prediction.
             while ch is None and idx >= 0:
                 ch = gens[idx].nextChar(word)
                 idx -= 1
+
+            if ch is None:
+                ch = random.choice(list(charSet))
 
             word += ch.lower()
 
