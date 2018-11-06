@@ -47,17 +47,8 @@ if len(words) == 0:
     print("No words in dictionary.")
     exit(0)
 
-gens = []
-for i in range(0, args.lb):
-    gen = Generator(i)
-    gen.train(words)
-    gens.append(gen)
-
-charSet = set()
-for word in words:
-    for ch in word:
-        if ch.isalpha():
-            charSet.add(ch)
+gen = Generator(args.lb)
+gen.train(words)
 
 
 for i in range(0, args.passwords):
@@ -67,18 +58,7 @@ for i in range(0, args.passwords):
         word = ""
 
         for k in range(0, args.chars):
-            ch = None
-            idx = k % args.lb
-
-            # Try various lookback amounts until we get a prediction.
-            while ch is None and idx >= 0:
-                ch = gens[idx].nextChar(word)
-                idx -= 1
-
-            if ch is None:
-                ch = random.choice(list(charSet))
-
-            word += ch.lower()
+            word += gen.nextChar(word)
 
         password += word[:args.chars]
 

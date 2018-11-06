@@ -20,14 +20,12 @@
 import random
 
 
-class Generator:
+class LBGenerator:
     """
-    Generates new characters for words based off of a Markov chain.
+    A generator for a specific amount of lookback.
     """
-
     def __init__(self, lookback):
         self.lookback = lookback
-        self.characterSet = set()
 
         # Create a Markov chain that is represented as a map from prefixes of
         # lookback characters to character frequencies.
@@ -77,3 +75,55 @@ class Generator:
             ch = random.choices(keys, values)[0]
 
         return ch
+
+
+class Generator:
+    """
+    Generates new characters for words based off of a Markov chain.
+    """
+    def __init__(self, lookback):
+        self.lookback = lookback
+
+        # Create generators with varying amounts of lookback.
+        self.gens = []
+        for i in range(0, self.lookback):
+            gen = LBGenerator(i + 1)
+            self.gens.append(gen)
+
+        self.charSet = set()
+
+
+    def train(self, words):
+        """
+        Trains the model on a list of words.
+        """
+        for gen in self.gens:
+            gen.train(words)
+
+        self.charSet = set()
+        for word in words:
+            for ch in word:
+                if ch.isalpha():
+                    self.charSet.add(ch)
+
+
+    def nextChar(self, word):
+        """
+        Predict what the next character in an unfinished word will be.
+        """
+        ch = None
+
+        if self.lookback == 0:
+            idx = -1
+        else:
+            idx = len(word) % self.lookback
+
+        # Try various lookback amounts until we get a prediction.
+        while ch is None and idx >= 0:
+            ch = self.gens[idx].nextChar(word)
+            idx -= 1
+
+        if ch is None:
+            ch = random.choice(list(self.charSet))
+
+        return ch.lower()
