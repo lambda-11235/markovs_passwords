@@ -41,6 +41,9 @@ if len(words) == 0:
     print("No words in dictionary.")
     exit(0)
 
+# Remove duplicates
+words = list(set(words))
+
 gen = Generator(args.lb)
 gen.train(words)
 
