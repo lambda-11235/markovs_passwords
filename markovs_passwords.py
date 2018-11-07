@@ -41,6 +41,8 @@ with open(args.modelFile, 'rb') as f:
     rep = msgpack.load(f, raw=False)
     gen = Generator.fromRepr(rep)
 
+print("Lookback: {}, Entropy Rate: {}".format(gen.lookback, gen.entropyRate()))
+print("\nPasswords:")
 
 for i in range(0, args.passwords):
     # Build password from frequencies.

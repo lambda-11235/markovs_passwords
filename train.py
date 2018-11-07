@@ -23,7 +23,7 @@ import msgpack
 from Generator import Generator
 
 
-parser = argparse.ArgumentParser(description='Create pronounceable passwords.')
+parser = argparse.ArgumentParser(description='Train model for Markov\'s passwords.')
 parser.add_argument(dest='dictFile', type=str,
         help='A dictionary file to model words on.')
 parser.add_argument(dest='modelFile', type=str,
