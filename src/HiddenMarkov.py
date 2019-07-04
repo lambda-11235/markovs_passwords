@@ -4,7 +4,15 @@ import random
 
 
 class HiddenMarkov:
+    """
+    Hidden Markov Model support class.
+    """
     def __init__(self, nodes, outputs, seed=None):
+        """
+        nodes: The number of hidden nodes in the transition graph.
+        outputs: The number of outputs.
+        seed: A seed for the random number generator.
+        """
         self.nodes = nodes
         self.outputs = outputs
 
@@ -21,115 +29,144 @@ class HiddenMarkov:
         self.state = 0
 
 
-    # TODO
-    # Optimize using matrix operations. Haven't done this yet because it's
-    # tricky
-    def train(self, samples, iterations):
+    def reseed(self, seed=None):
         """
-        Baum–Welch algorithm
+        Reseed random number generator. If `seed` is given it is used, otherwise
+        it is seeded with the current time.
+        """
+        if seed is None:
+            self.randGen.seed()
+        else:
+            self.randGen.seed(seed)
+
+
+    def train(self, samples, iterations, reportProgress=False):
+        """
+        Train the HMM of a set of samples.
+        This method uses the Baum–Welch algorithm.
+
+        samples: A list of samples with values in the range [0, self.outputs).
+                 `samples[i][t]` is the output for sample `i` at time `t`.
+        iterations: The number of iterations to run for.
+        reportProgress: Prints progress out as a percentage.
         """
         np.random.seed(self.randGen.randint(0, 1 << 31))
+
+        cnt = 0
+        total = iterations*(3*len(samples) + self.outputs)
+        def progress():
+            nonlocal cnt
+            nonlocal reportProgress
+
+            if reportProgress:
+                print("\r{:.1f}%    ".format(cnt/total*100), end='')
+            cnt += 1
 
         for _ in range(iterations):
             ys = []
             es = []
 
             for s in samples:
+                progress()
+
                 (y, e) = self.getYE(s)
                 ys.append(y)
                 es.append(e)
 
             # Update transitions
-            for i in range(self.nodes):
-                for j in range(self.nodes):
-                    esum = 0
-                    ysum = 0
+            esum = 0
+            ysum = 0
 
-                    for sidx in range(len(samples)):
-                        for t in range(len(samples[sidx]) - 1):
-                            esum += es[sidx][t, i, j]
-                            ysum += ys[sidx][t, i]
+            for sidx in range(len(samples)):
+                progress()
 
-                    if ysum > 0:
-                        self.transitions[i,j] = esum/ysum
+                for t in range(len(samples[sidx]) - 1):
+                    esum += es[sidx][t, :, :]
+                    ysum += ys[sidx][t, :]
+
+            # TODO: Double check if this division is correct.
+            if ysum is not 0:
+                self.transitions = esum/ysum
 
             # Update emissions
+            ysum = 0
+            for sidx in range(len(samples)):
+                progress()
+
+                for t in range(len(samples[sidx])):
+                    ysum += ys[sidx][t, :]
+
             for v in range(self.outputs):
-                for i in range(self.nodes):
-                    ysumCond = 0
-                    ysum = 0
+                progress()
 
-                    for sidx in range(len(samples)):
-                        for t in range(len(samples[sidx]) - 1):
-                            if samples[sidx][t] == v:
-                                ysumCond += ys[sidx][t, i]
-                            ysum += ys[sidx][t, i]
+                ysumCond = 0
 
-                    if ysum > 0:
-                        self.emissions[i, v] = ysumCond/ysum
+                for sidx in range(len(samples)):
+                    for t in range(len(samples[sidx])):
+                        if samples[sidx][t] == v:
+                            ysumCond += ys[sidx][t, :]
 
-            # Add some randomness so that we don't overfit.
-            self.transitions += np.random.random(self.transitions.shape)/100
-            self.transitions /= self.transitions.sum()
+                # TODO: Double check if this division is correct.
+                if ysum is not 0:
+                    self.emissions[:, v] = ysumCond/ysum
 
-            self.emissions += np.random.random(self.emissions.shape)/100
-            self.emissions /= self.emissions.sum()
+        if reportProgress:
+            print()
 
     def getYE(self, sample):
-            a = self.forward(sample)
-            b = self.backward(sample)
+        """
+        Compute gamma and epsilon for a specific sample.
+        """
+        a = self.forward(sample)
+        b = self.backward(sample)
 
-            y = np.zeros((len(sample), self.nodes))
-            e = np.zeros((len(sample) - 1, self.nodes, self.nodes))
+        y = a*b
 
-            for t in range(len(sample)):
-                for i in range(self.nodes):
-                    y[t, i] = a[t, i]*b[t, i]
+        for t in range(len(sample)):
+            if y[t, :].sum() > 0:
+                y[t, :] /= y[t, :].sum()
 
-                if y[t, :].sum() > 0:
-                    y[t, :] /= y[t, :].sum()
+        e = np.zeros((len(sample) - 1, self.nodes, self.nodes))
+        for t in range(len(sample) - 1):
+            e[t,:,:] = a[t, :] @ self.transitions[:,:] * (b[t+1, :] @ self.emissions[:, sample[t + 1]])
 
-            for t in range(len(sample) - 1):
-                for i in range(self.nodes):
-                    for j in range(self.nodes):
-                        e[t,i,j] = a[t, i]*self.transitions[i,j]*b[t+1, j]*self.emissions[j, sample[t + 1]]
+            if e[t,:,:].sum() > 0:
+                e[t,:,:] /= e[t,:,:].sum()
 
-                if e[t,:,:].sum() > 0:
-                    e[t,:,:] /= e[t,:,:].sum()
-
-            return (y, e)
+        return (y, e)
 
     def forward(self, sample):
+        """
+        Run the forward algorithm for a sample.
+        """
         a = np.zeros((len(sample), self.nodes))
 
-        for i in range(self.nodes):
-            a[0,i] = self.emissions[i, sample[0]]
+        a[0,:] = self.emissions[:, sample[0]]
 
         for t in range(1, len(sample)):
-            for i in range(self.nodes):
-                a[t, i] = self.emissions[i, sample[t]] * sum([a[t - 1, j] * self.transitions[i, j] for j in range(self.nodes)])
+            a[t, :] = self.emissions[:, sample[t]] * (self.transitions[:, :] @ a[t - 1, :])
 
         return a
 
     def backward(self, sample):
+        """
+        Run the backward algorithm for a sample.
+        """
         b = np.zeros((len(sample), self.nodes))
 
-        for i in range(self.nodes):
-            b[-1, i] = self.emissions[i, sample[-1]]
+        b[-1, :] = self.emissions[:, sample[-1]]
 
         for tpre in range(1, len(sample)):
             t = len(sample) - 1 - tpre
-
-            for i in range(self.nodes):
-                b[t, i] = 0
-
-                for j in range(self.nodes):
-                    b[t, i] += b[t+1, j] * self.transitions[i,j] * self.emissions[j, sample[t + 1]]
+            b[t, :] = self.transitions[:,:] @ (self.emissions[:, sample[t + 1]] * b[t+1, :])
 
         return b
 
 
     def generate(self, length):
+        """
+        Generate a output sequence of length `length`.
+        """
         ret = []
         self.state = 0
 
@@ -140,32 +177,13 @@ class HiddenMarkov:
         return ret
 
     def emit(self):
+        """
+        Select an output for the current state.
+        """
         return self.randGen.choices(range(self.outputs), self.emissions[self.state,:])[0]
 
     def transNext(self):
+        """
+        Transition to the next state.
+        """
         self.state = self.randGen.choices(range(self.nodes), self.transitions[self.state,:])[0]
-
-
-if __name__ == '__main__':
-
-    minChar = 255
-    maxChar = 0
-
-    with open('./dict/eng.txt') as f:
-        samples = f.readlines()
-
-    samples = random.sample(samples, 10)
-
-    for i in range(len(samples)):
-        samples[i] = [ord(c.lower()) for c in samples[i][:-1]]
-        minChar = min(minChar, min(samples[i]))
-        maxChar = max(maxChar, max(samples[i]))
-
-    for i in range(len(samples)):
-        samples[i] = [x - minChar for x in samples[i]]
-
-    hmm = HiddenMarkov(100, maxChar - minChar + 1, seed=127)
-    hmm.train(samples, 10)
-    print(hmm.transitions)
-    print(hmm.emissions)
-    print(''.join(map(lambda n: chr(n + minChar), hmm.generate(30))))

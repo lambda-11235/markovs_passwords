@@ -18,7 +18,8 @@
 
 
 import argparse
-import msgpack
+#import msgpack
+import pickle
 
 from Generator import Generator
 
@@ -38,22 +39,16 @@ args = parser.parse_args()
 
 
 with open(args.modelFile, 'rb') as f:
-    rep = msgpack.load(f, raw=False)
-    gen = Generator.fromRepr(rep)
+    gen = pickle.load(f)
 
-print("Lookback: {}, Entropy Rate: {}".format(gen.lookback, gen.entropyRate()))
-print("\nPasswords:")
+# Reseed so we don't generate the same passwords on every call.
+gen.reseed()
 
 for i in range(0, args.passwords):
-    # Build password from frequencies.
+    # Build password from HMM.
     password = ""
     for j in range(0, args.words):
-        word = ""
-
-        for k in range(0, args.chars):
-            word += gen.nextChar(word)
-
-        password += word[:args.chars]
+        password += gen.generate(args.chars)
 
         if j < args.words - 1:
             password += args.sep

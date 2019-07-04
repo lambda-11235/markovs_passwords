@@ -19,6 +19,7 @@
 
 import argparse
 import msgpack
+import pickle
 
 from Generator import Generator
 
@@ -27,9 +28,13 @@ parser = argparse.ArgumentParser(description='Train model for Markov\'s password
 parser.add_argument(dest='dictFile', type=str,
         help='A dictionary file to model words on.')
 parser.add_argument(dest='modelFile', type=str,
-        help='a file to output the model to.')
-parser.add_argument('-l', '--lookback', dest='lb', type=int, default=5,
-        help='Lookback in Markov chain.')
+        help='A file to output the model to.')
+parser.add_argument('-n', '--nodes', type=int, default=256,
+        help='The number of nodes in the HMM.')
+parser.add_argument('-i', '--iterations', type=int, default=4,
+        help='The number of iterations for training.')
+parser.add_argument('-v', '--verbose', action='store_true',
+        help='Print extra information.')
 args = parser.parse_args()
 
 
@@ -44,10 +49,7 @@ if len(words) == 0:
 # Remove duplicates
 words = list(set(words))
 
-gen = Generator(args.lb)
-gen.train(words)
-
-print("Entropy Rate: {}".format(gen.entropyRate()))
+gen = Generator(words, args.nodes, args.iterations, args.verbose)
 
 with open(args.modelFile, 'wb') as f:
-    msgpack.dump(gen.toRepr(), f)
+    pickle.dump(gen, f)
