@@ -109,7 +109,7 @@ class HiddenMarkov:
                 b[t, i] = 0
 
                 for j in range(self.nodes):
-                    b[t, i] += b[t+1, j] * self.transitions[i,j] * self.transitions[j, sample[t + 1]]
+                    b[t, i] += b[t+1, j] * self.transitions[i,j] * self.emissions[j, sample[t + 1]]
 
         return b
 
