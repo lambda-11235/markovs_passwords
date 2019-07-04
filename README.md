@@ -66,6 +66,12 @@ lookback of 2.
     'at': {'e': 1.0}}}]}
 ```
 
+## Hidden Markov Model
+
+An HMM implementation can be found in the `hidden` branch. The HMM needs to be
+modified to handle words better, as it currently performs worse than the current
+model.
+
 ## Contributing
 
 Contributions are welcome and can be made via pull requests. Low-hanging fruit
