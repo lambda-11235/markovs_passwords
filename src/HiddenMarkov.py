@@ -1,5 +1,5 @@
 
-import numpy as np
+import tensorflow as tf
 import random
 
 
@@ -16,28 +16,22 @@ class HiddenMarkov:
         self.nodes = nodes
         self.outputs = outputs
 
-        self.transitions = np.random.random((nodes, nodes))
-        self.emissions   = np.random.random((nodes, outputs))
+        self.sess = tf.Session()
+        self.randGen = random.Random()
 
+        self.transitions = self.sess.run(tf.random.uniform((nodes, nodes), name='transition'))
+        self.emissions   = self.sess.run(tf.random.uniform((nodes, outputs), name='emission'))
         #self.transitions[:,:] = 1/nodes
         #self.emissions[:,:] = 1/outputs
-
-        self.randGen = random.Random()
-        if seed is not None:
-            self.randGen.seed(seed)
 
         self.state = 0
 
 
-    def reseed(self, seed=None):
+    def reseed(self):
         """
-        Reseed random number generator. If `seed` is given it is used, otherwise
-        it is seeded with the current time.
+        Reseed random number generator.
         """
-        if seed is None:
-            self.randGen.seed()
-        else:
-            self.randGen.seed(seed)
+        self.randGen.seed()
 
 
     def train(self, samples, iterations, reportProgress=False):
@@ -50,7 +44,7 @@ class HiddenMarkov:
         iterations: The number of iterations to run for.
         reportProgress: Prints progress out as a percentage.
         """
-        np.random.seed(self.randGen.randint(0, 1 << 31))
+        tf.random.set_random_seed(self.randGen.randint(0, 1 << 31))
 
         cnt = 0
         total = iterations*(3*len(samples) + self.outputs)
@@ -81,12 +75,12 @@ class HiddenMarkov:
                 progress()
 
                 for t in range(len(samples[sidx]) - 1):
-                    esum += es[sidx][t, :, :]
-                    ysum += ys[sidx][t, :]
+                    esum += es[sidx][t]
+                    ysum += ys[sidx][t]
 
             # TODO: Double check if this division is correct.
             if ysum is not 0:
-                self.transitions = esum/ysum
+                self.transitions = self.sess.run(esum/ysum)
 
             # Update emissions
             ysum = 0
@@ -94,7 +88,7 @@ class HiddenMarkov:
                 progress()
 
                 for t in range(len(samples[sidx])):
-                    ysum += ys[sidx][t, :]
+                    ysum += ys[sidx][t]
 
             for v in range(self.outputs):
                 progress()
@@ -104,11 +98,11 @@ class HiddenMarkov:
                 for sidx in range(len(samples)):
                     for t in range(len(samples[sidx])):
                         if samples[sidx][t] == v:
-                            ysumCond += ys[sidx][t, :]
+                            ysumCond += ys[sidx][t]
 
                 # TODO: Double check if this division is correct.
                 if ysum is not 0:
-                    self.emissions[:, v] = ysumCond/ysum
+                    self.emissions[:, v] = self.sess.run(ysumCond/ysum)
 
         if reportProgress:
             print()
@@ -120,18 +114,18 @@ class HiddenMarkov:
         a = self.forward(sample)
         b = self.backward(sample)
 
-        y = a*b
-
+        y = []
         for t in range(len(sample)):
-            if y[t, :].sum() > 0:
-                y[t, :] /= y[t, :].sum()
+            val = a[t]*b[t]
+            val /= tf.math.reduce_sum(val)
+            y.append(val)
 
-        e = np.zeros((len(sample) - 1, self.nodes, self.nodes))
+        e = []
         for t in range(len(sample) - 1):
-            e[t,:,:] = a[t, :] @ self.transitions[:,:] * (b[t+1, :] @ self.emissions[:, sample[t + 1]])
-
-            if e[t,:,:].sum() > 0:
-                e[t,:,:] /= e[t,:,:].sum()
+            x = tf.expand_dims(self.emissions[:, sample[t + 1]], 0)
+            val = tf.transpose(a[t]) @ self.transitions * (b[t+1] @ x)
+            val /= tf.math.reduce_sum(val)
+            e.append(val)
 
         return (y, e)
 
@@ -139,12 +133,11 @@ class HiddenMarkov:
         """
         Run the forward algorithm for a sample.
         """
-        a = np.zeros((len(sample), self.nodes))
-
-        a[0,:] = self.emissions[:, sample[0]]
+        a = [tf.expand_dims(self.emissions[:, sample[0]], 1)]
 
         for t in range(1, len(sample)):
-            a[t, :] = self.emissions[:, sample[t]] * (self.transitions[:, :] @ a[t - 1, :])
+            x = tf.expand_dims(self.emissions[:, sample[t]], 1)
+            a.append(x * (self.transitions @ a[-1]))
 
         return a
 
@@ -152,13 +145,14 @@ class HiddenMarkov:
         """
         Run the backward algorithm for a sample.
         """
-        b = np.zeros((len(sample), self.nodes))
-
-        b[-1, :] = self.emissions[:, sample[-1]]
+        b = [tf.expand_dims(self.emissions[:, sample[-1]], 1)]
 
         for tpre in range(1, len(sample)):
             t = len(sample) - 1 - tpre
-            b[t, :] = self.transitions[:,:] @ (self.emissions[:, sample[t + 1]] * b[t+1, :])
+            x = tf.expand_dims(self.emissions[:, sample[t + 1]], 1)
+            b.append(self.transitions @ (x * b[-1]))
+
+        b.reverse()
 
         return b
 
